@@ -6,10 +6,9 @@ const timeZoneIds = [
   'Australia/Perth'
 ];
 
-const apiKey = 'LAYLO026ZUZ9';
+const apiKey = 'LAYLO026ZUZ9'; // Replace 'YOUR_API_KEY' with your actual API key
 
 const fetchTimeForTimeZone = async (fromTimeZone, timestamp, toTimeZone) => {
-  console.log(fromTimeZone);
   const apiUrl = `https://api.timezonedb.com/v2.1/convert-time-zone?key=${apiKey}&format=xml&from=${encodeURIComponent(fromTimeZone)}&to=${encodeURIComponent(toTimeZone)}&time=${timestamp}`;
 
   try {
@@ -32,9 +31,7 @@ const fetchTimeForTimeZone = async (fromTimeZone, timestamp, toTimeZone) => {
 };
 
 const displayTime = (timeZoneIndex, formattedTime, formattedDate) => {
-  console.log("Formated date =", formattedDate);
   const date = new Date(formattedDate * 1000);
-  console.log(date);
   const hours = date.getHours();
   const minutes = date.getMinutes();
   const seconds = date.getSeconds();
@@ -47,22 +44,49 @@ function delay(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+// Fetch time zone options and populate dropdown
+async function populateTimeZoneDropdown() {
+  const apiUrl = `https://api.timezonedb.com/v2.1/list-time-zone?key=${apiKey}&format=json`;
+
+  try {
+    const response = await fetch(apiUrl);
+    if (!response.ok) {
+      throw new Error(`Error fetching time zones: ${response.statusText}`);
+    }
+    const data = await response.json();
+    const selectElement = document.getElementById('fromTimeZoneSelect');
+    data.zones.forEach(zone => {
+      const option = document.createElement('option');
+      option.value = zone.zoneName;
+      option.textContent = `${zone.countryName} (${zone.zoneName})`;
+      selectElement.appendChild(option);
+    });
+  } catch (error) {
+    console.error('Error fetching time zones:', error);
+    alert('Error fetching time zones. Please try again later.');
+  }
+}
+
+// Call the function to populate dropdown when the page loads
+window.addEventListener('load', populateTimeZoneDropdown);
+
+// Modify convertFutureDateTime to use selected fromTimeZone
 const convertFutureDateTime = async () => {
   const futureDateTimeInput = document.getElementById('futureDateTime').value;
+  const fromTimeZone = document.getElementById('fromTimeZoneSelect').value; // Get selected fromTimeZone
 
   if (!futureDateTimeInput) {
     alert('Please select a future date and time.');
     return;
   }
 
-  // Convert input date and time to timestamp
   const dateObject = new Date(futureDateTimeInput);
-  const timestamp = Math.floor(dateObject.getTime() / 1000); // Convert to seconds
+  const timestamp = Math.floor(dateObject.getTime() / 1000);
 
   for (const timeZoneId of timeZoneIds) {
     try {
-      await delay(1000); // Consider removing or adjusting delay based on API rate limits
-      const responseData = await fetchTimeForTimeZone('Africa/Ouagadougou', timestamp, timeZoneId);
+      await delay(1000);
+      const responseData = await fetchTimeForTimeZone(fromTimeZone, timestamp, timeZoneId);
       const formattedTime = responseData.convertedDateTime.slice(11, 16);
       const formattedDate = responseData.convertedDateTime.slice(0, 10);
       displayTime(timeZoneIds.indexOf(timeZoneId), formattedTime, formattedDate);
